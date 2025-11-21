@@ -45,6 +45,7 @@ pub struct FileTypeStat {
 pub struct FileInfo {
     pub path: String,
     pub size: u64,
+    pub content: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,4 +55,5 @@ pub struct ProjectAnalysis {
     pub file_types: Vec<FileTypeStat>,
     pub largest_files: Vec<FileInfo>,
     pub suggestions: Vec<String>,
+    pub summary: String,
 }

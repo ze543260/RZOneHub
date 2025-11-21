@@ -5,7 +5,8 @@ mod types;
 
 use commands::{
     analyze_project_structure, chat_with_ai, connect_github, generate_code, get_system_info,
-    test_api_connection,
+    test_api_connection, open_repository, list_directory, read_file_content, 
+    write_file_content, run_terminal_command, expand_directory,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,6 +33,12 @@ pub fn run() {
             test_api_connection,
             connect_github,
             get_system_info,
+            open_repository,
+            list_directory,
+            expand_directory,
+            read_file_content,
+            write_file_content,
+            run_terminal_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

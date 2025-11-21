@@ -54,12 +54,10 @@ export default function SettingsPage() {
   const handleConnectGitHub = async () => {
     if (!githubToken.trim()) return
     
-    // Save token to localStorage for later use
-    localStorage.setItem('github_token', githubToken)
-    
     await connectGitHub(githubToken)
     if (!githubError) {
       setGithubSaved(true)
+      setGithubToken('')
       setTimeout(() => setGithubSaved(false), 2000)
     }
   }

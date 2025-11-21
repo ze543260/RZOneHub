@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Github,
   GitFork,
   Star,
   Lock,
-  ExternalLink,
+  FolderGit2,
   RefreshCw,
   LogOut,
   Loader2,
@@ -14,6 +15,7 @@ import { useGitHubStore } from '@/store/githubStore'
 import { clsx } from 'clsx'
 
 export default function GitHubPage() {
+  const navigate = useNavigate()
   const user = useGitHubStore((state) => state.user)
   const repos = useGitHubStore((state) => state.repos)
   const loading = useGitHubStore((state) => state.loading)
@@ -149,22 +151,25 @@ export default function GitHubPage() {
                         {repo.name}
                       </h3>
                       {repo.private && (
-                        <Lock className="h-3.5 w-3.5 text-slate-400" title="Privado" />
+                        <Lock className="h-3.5 w-3.5 text-slate-400" aria-label="Privado" />
                       )}
                     </div>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {repo.fullName}
                     </p>
                   </div>
-                  <a
-                    href={repo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-                    title="Abrir no GitHub"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => {
+                        const [owner, repoName] = repo.fullName.split('/')
+                        navigate(`/github/${owner}/${repoName}`)
+                      }}
+                      className="rounded-lg p-1.5 text-brand opacity-0 transition hover:bg-brand/10 group-hover:opacity-100 dark:text-brand-light dark:hover:bg-brand/20"
+                      aria-label="Abrir repositório"
+                    >
+                      <FolderGit2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {repo.description && (

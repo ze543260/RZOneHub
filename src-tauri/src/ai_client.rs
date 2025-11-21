@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::{json, Value};
 
-use crate::types::{ChatMessage, ChatRequest, ChatResponse, CodeRequest, CodeResponse};
+use crate::types::{ChatRequest, ChatResponse, CodeRequest, CodeResponse};
 
 const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 const ANTHROPIC_CHAT_URL: &str = "https://api.anthropic.com/v1/messages";

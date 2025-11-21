@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { StateCreator } from 'zustand'
 import { isTauri } from '@/utils/platform'
 
@@ -28,9 +29,11 @@ type GitHubState = {
   loading: boolean
   error?: string
   connected: boolean
+  token?: string
   connectGitHub: (token: string) => Promise<void>
   fetchRepos: () => Promise<void>
   disconnect: () => void
+  openRepo: (url: string) => Promise<void>
 }
 
 const githubCreator: StateCreator<GitHubState> = (set, get) => ({
@@ -71,6 +74,7 @@ const githubCreator: StateCreator<GitHubState> = (set, get) => ({
             bio: userData.bio,
           },
           connected: true,
+          token,
           loading: false,
         })
         
@@ -90,6 +94,8 @@ const githubCreator: StateCreator<GitHubState> = (set, get) => ({
   fetchRepos: async () => {
     set({ loading: true, error: undefined })
     try {
+      const token = get().token
+      
       if (!isTauri()) {
         // Fallback data for development
         set({
@@ -124,9 +130,6 @@ const githubCreator: StateCreator<GitHubState> = (set, get) => ({
         return
       }
 
-      // TODO: Store token securely and use it here
-      // For now, this is a placeholder
-      const token = localStorage.getItem('github_token')
       if (!token) {
         throw new Error('No GitHub token found')
       }
@@ -167,9 +170,22 @@ const githubCreator: StateCreator<GitHubState> = (set, get) => ({
   },
   
   disconnect: () => {
-    localStorage.removeItem('github_token')
-    set({ user: undefined, repos: [], connected: false })
+    set({ user: undefined, repos: [], connected: false, token: undefined })
+  },
+  
+  openRepo: async (_url: string) => {
+    // URL não é mais necessária - apenas redireciona para a página do visualizador
+    // A URL será usada apenas para extrair owner/repo no componente
   },
 })
 
-export const useGitHubStore = create<GitHubState>()(githubCreator)
+export const useGitHubStore = create<GitHubState>()(
+  persist(githubCreator, {
+    name: 'github-storage',
+    partialize: (state) => ({
+      user: state.user,
+      connected: state.connected,
+      token: state.token,
+    }),
+  })
+)

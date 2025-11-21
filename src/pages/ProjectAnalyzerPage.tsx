@@ -1,25 +1,221 @@
-import { useEffect } from 'react'
-import { FolderTree, FileCode, Lightbulb, TrendingUp, Loader2, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { FolderTree, FileCode, Lightbulb, TrendingUp, Loader2, RefreshCw, FolderOpen, Github } from 'lucide-react'
 import { useProjectStore } from '@/store/projectStore'
+import { useGitHubStore } from '@/store/githubStore'
+import { isTauri } from '@/utils/platform'
 
 export default function ProjectAnalyzerPage() {
   const analysis = useProjectStore((state) => state.analysis)
   const loading = useProjectStore((state) => state.loading)
   const error = useProjectStore((state) => state.error)
   const analyze = useProjectStore((state) => state.analyze)
+  const selectAndAnalyze = useProjectStore((state) => state.selectAndAnalyze)
+  const analyzeGitHubRepo = useProjectStore((state) => state.analyzeGitHubRepo)
+  
+  const githubConnected = useGitHubStore((state) => state.connected)
+  const repos = useGitHubStore((state) => state.repos)
+  const fetchRepos = useGitHubStore((state) => state.fetchRepos)
+  const githubLoading = useGitHubStore((state) => state.loading)
+  
+  const [showGitHubInput, setShowGitHubInput] = useState(false)
+  const [showMyRepos, setShowMyRepos] = useState(false)
+  const [repoUrl, setRepoUrl] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    if (!analysis) {
+    if (!analysis && isTauri()) {
+      // Analisa o diretório atual automaticamente
       analyze()
     }
   }, [analysis, analyze])
 
-  const handleAnalyze = () => {
+  const handleSelectFolder = () => {
+    selectAndAnalyze()
+  }
+
+  const handleAnalyzeCurrent = () => {
     analyze()
   }
 
+  const handleAnalyzeGitHub = async () => {
+    if (!githubConnected) {
+      alert('Por favor, conecte-se ao GitHub primeiro na página GitHub.')
+      return
+    }
+    
+    // Buscar repos se ainda não tem
+    if (repos.length === 0 && !githubLoading) {
+      await fetchRepos()
+    }
+    
+    setShowMyRepos(true)
+  }
+
+  const handleAnalyzeRepoFromList = (fullName: string) => {
+    const [owner, repo] = fullName.split('/')
+    analyzeGitHubRepo(owner, repo)
+    setShowMyRepos(false)
+    setSearchTerm('')
+  }
+
+  const handleShowManualInput = () => {
+    setShowMyRepos(false)
+    setShowGitHubInput(true)
+  }
+
+  const handleSubmitGitHubRepo = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Parse GitHub URL or owner/repo format
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/) || repoUrl.match(/^([^/]+)\/([^/]+)$/)
+    
+    if (!match) {
+      alert('Formato inválido. Use: owner/repo ou URL completa do GitHub')
+      return
+    }
+
+    const [, owner, repo] = match
+    const cleanRepo = repo.replace(/\.git$/, '')
+    
+    analyzeGitHubRepo(owner, cleanRepo)
+    setShowGitHubInput(false)
+    setRepoUrl('')
+  }
+
+  const filteredRepos = repos.filter((repo) =>
+    repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    repo.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   return (
     <div className="flex h-full flex-col gap-6">
+      {/* My Repos Modal */}
+      {showMyRepos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex h-[600px] w-full max-w-2xl flex-col rounded-2xl border border-slate-300/50 bg-white shadow-2xl dark:border-slate-700/50 dark:bg-slate-800">
+            <div className="border-b border-slate-300/50 p-6 dark:border-slate-700/50">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Meus Repositórios
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowMyRepos(false)
+                    setSearchTerm('')
+                  }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  ✕
+                </button>
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar repositório..."
+                className="w-full rounded-xl border border-slate-300/50 bg-white px-4 py-2 text-sm text-slate-900 placeholder-slate-400 transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-white dark:placeholder-slate-500"
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {githubLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand" />
+                </div>
+              ) : filteredRepos.length === 0 ? (
+                <p className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+                  {searchTerm ? 'Nenhum repositório encontrado' : 'Nenhum repositório disponível'}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredRepos.map((repo) => (
+                    <button
+                      key={repo.id}
+                      onClick={() => handleAnalyzeRepoFromList(repo.fullName)}
+                      className="w-full rounded-xl border border-slate-300/50 bg-white/80 p-4 text-left transition hover:border-brand/50 hover:bg-white dark:border-slate-700/50 dark:bg-slate-700/50 dark:hover:border-brand/50 dark:hover:bg-slate-700"
+                    >
+                      <div className="mb-2 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-900 dark:text-white">
+                            {repo.name}
+                          </h4>
+                          {repo.description && (
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                              {repo.description}
+                            </p>
+                          )}
+                        </div>
+                        {repo.private && (
+                          <span className="ml-2 rounded-full bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-600 dark:text-slate-300">
+                            Privado
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                        {repo.language && (
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-brand"></span>
+                            {repo.language}
+                          </span>
+                        )}
+                        <span>⭐ {repo.stars}</span>
+                        <span>🍴 {repo.forks}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-300/50 p-4 dark:border-slate-700/50">
+              <button
+                onClick={handleShowManualInput}
+                className="w-full rounded-xl border border-slate-300/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                Ou digite URL manualmente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GitHub Repo Input Modal */}
+      {showGitHubInput && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-300/50 bg-white p-6 shadow-2xl dark:border-slate-700/50 dark:bg-slate-800">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
+              Analisar Repositório GitHub
+            </h3>
+            <form onSubmit={handleSubmitGitHubRepo}>
+              <input
+                type="text"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="owner/repo ou https://github.com/owner/repo"
+                className="mb-4 w-full rounded-xl border border-slate-300/50 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-white dark:placeholder-slate-500"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGitHubInput(false)
+                    setRepoUrl('')
+                  }}
+                  className="flex-1 rounded-xl border border-slate-300/50 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark dark:bg-brand-light dark:hover:bg-brand"
+                >
+                  Analisar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="rounded-xl border border-slate-300/50 bg-white/60 p-6 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40">
         <div className="flex items-center gap-3">
@@ -34,23 +230,41 @@ export default function ProjectAnalyzerPage() {
               Insights sobre estrutura, arquivos e melhorias
             </p>
           </div>
-          <button
-            onClick={handleAnalyze}
-            disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark hover:shadow-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/60 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-light dark:hover:bg-brand"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analisando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4" />
-                Analisar Projeto
-              </>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAnalyzeGitHub}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-xl border border-slate-300/50 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <Github className="h-4 w-4" />
+              GitHub Repo
+            </button>
+            <button
+              onClick={handleSelectFolder}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-xl border border-slate-300/50 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <FolderOpen className="h-4 w-4" />
+              Pasta Local
+            </button>
+            <button
+              onClick={handleAnalyzeCurrent}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand-dark hover:shadow-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/60 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-light dark:hover:bg-brand"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analisando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Analisar Atual
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

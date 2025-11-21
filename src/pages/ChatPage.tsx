@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Send, Plus, Trash2, Loader2 } from 'lucide-react'
+import { Send, Plus, Trash2, Loader2, Settings, FolderOpen, Edit2, Check, X, StopCircle } from 'lucide-react'
 import { useChatStore } from '@/store/chatStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { clsx } from 'clsx'
+import { isTauri } from '@/utils/platform'
 
 export default function ChatPage() {
   const [input, setInput] = useState('')
+  const [showProviderSelect, setShowProviderSelect] = useState(false)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const sessions = useChatStore((state) => state.sessions)
@@ -15,6 +20,13 @@ export default function ChatPage() {
   const setActiveSession = useChatStore((state) => state.setActiveSession)
   const newSession = useChatStore((state) => state.newSession)
   const deleteSession = useChatStore((state) => state.deleteSession)
+  const editMessage = useChatStore((state) => state.editMessage)
+  const stopGeneration = useChatStore((state) => state.stopGeneration)
+  const setSessionProvider = useChatStore((state) => state.setSessionProvider)
+  const setSessionProjectContext = useChatStore((state) => state.setSessionProjectContext)
+
+  const providers = useSettingsStore((state) => state.apiKeys)
+  const defaultProvider = useSettingsStore((state) => state.provider)
 
   const currentSession = sessions.find((s) => s.id === activeSessionId) ?? sessions[0]
 
@@ -35,6 +47,46 @@ export default function ChatPage() {
     await sendMessage(input)
     setInput('')
   }
+
+  const handleAttachProject = async () => {
+    if (!isTauri() || !currentSession) return
+
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Selecione o projeto',
+      })
+
+      if (selected && typeof selected === 'string') {
+        await setSessionProjectContext(currentSession.id, selected)
+      }
+    } catch (err) {
+      console.error('Erro ao anexar projeto:', err)
+    }
+  }
+
+  const handleEditMessage = (messageId: string, content: string) => {
+    setEditingMessageId(messageId)
+    setEditContent(content)
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingMessageId || !currentSession) return
+    editMessage(currentSession.id, editingMessageId, editContent)
+    setEditingMessageId(null)
+    setEditContent('')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null)
+    setEditContent('')
+  }
+
+  const availableProviders = Object.keys(providers).filter(
+    (p) => providers[p as keyof typeof providers] || p === 'ollama'
+  )
 
   return (
     <div className="flex h-full gap-4">
@@ -80,6 +132,59 @@ export default function ChatPage() {
 
       {/* Chat Area */}
       <main className="flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-300/50 bg-white/40 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/30">
+        {/* Header with controls */}
+        <div className="border-b border-slate-300/50 bg-white/60 p-4 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              {currentSession?.title}
+            </h2>
+            <div className="flex items-center gap-2">
+              {/* Provider Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowProviderSelect(!showProviderSelect)}
+                  className="flex items-center gap-2 rounded-lg border border-slate-300/50 bg-white/80 px-3 py-2 text-sm transition hover:bg-white dark:border-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="capitalize">
+                    {currentSession?.provider || defaultProvider}
+                  </span>
+                </button>
+
+                {showProviderSelect && (
+                  <div className="absolute right-0 top-full z-10 mt-2 w-48 rounded-lg border border-slate-300/50 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                    {availableProviders.map((provider) => (
+                      <button
+                        key={provider}
+                        onClick={() => {
+                          if (currentSession) {
+                            setSessionProvider(currentSession.id, provider)
+                          }
+                          setShowProviderSelect(false)
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm capitalize hover:bg-slate-100 dark:hover:bg-slate-700"
+                      >
+                        {provider}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Attach Project */}
+              {isTauri() && (
+                <button
+                  onClick={handleAttachProject}
+                  className="flex items-center gap-2 rounded-lg border border-slate-300/50 bg-white/80 px-3 py-2 text-sm transition hover:bg-white dark:border-slate-700/50 dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                  title={currentSession?.projectContext ? 'Projeto anexado' : 'Anexar projeto'}
+                >
+                  <FolderOpen className={clsx('h-4 w-4', currentSession?.projectContext && 'text-brand')} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6">
           {currentSession?.messages.map((message) => (
@@ -90,24 +195,73 @@ export default function ChatPage() {
                 message.role === 'user' ? 'justify-end' : 'justify-start',
               )}
             >
-              <div
-                className={clsx(
-                  'max-w-[80%] rounded-2xl px-4 py-3 shadow-sm',
-                  message.role === 'user'
-                    ? 'bg-brand text-white dark:bg-brand-light'
-                    : 'border border-slate-300/50 bg-white/80 text-slate-800 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-100',
+              <div className="group relative max-w-[80%]">
+                {editingMessageId === message.id ? (
+                  <div className="rounded-2xl border border-slate-300/50 bg-white/80 p-4 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-700/50">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="mb-2 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveEdit}
+                        className="flex items-center gap-1 rounded-lg bg-brand px-3 py-1 text-xs text-white hover:bg-brand-dark"
+                      >
+                        <Check className="h-3 w-3" />
+                        Salvar
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="flex items-center gap-1 rounded-lg bg-slate-200 px-3 py-1 text-xs text-slate-700 hover:bg-slate-300 dark:bg-slate-600 dark:text-slate-200"
+                      >
+                        <X className="h-3 w-3" />
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className={clsx(
+                        'rounded-2xl px-4 py-3 shadow-sm',
+                        message.role === 'user'
+                          ? 'bg-brand text-white dark:bg-brand-light'
+                          : 'border border-slate-300/50 bg-white/80 text-slate-800 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-100',
+                      )}
+                    >
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {message.content}
+                      </p>
+                    </div>
+                    {message.role === 'user' && (
+                      <button
+                        onClick={() => handleEditMessage(message.id, message.content)}
+                        className="absolute -left-8 top-2 rounded-lg p-1 opacity-0 transition hover:bg-slate-200 group-hover:opacity-100 dark:hover:bg-slate-700"
+                        title="Editar mensagem"
+                      >
+                        <Edit2 className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                      </button>
+                    )}
+                  </>
                 )}
-              >
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {message.content}
-                </p>
               </div>
             </div>
           ))}
           {isStreaming && (
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Gerando resposta...
+            <div className="flex items-center justify-between rounded-lg border border-slate-300/50 bg-white/60 px-4 py-3 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/40">
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Gerando resposta...
+              </div>
+              <button
+                onClick={stopGeneration}
+                className="flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1 text-xs text-white transition hover:bg-red-600"
+              >
+                <StopCircle className="h-3 w-3" />
+                Parar
+              </button>
             </div>
           )}
           {error && (

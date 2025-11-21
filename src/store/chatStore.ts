@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { StateCreator } from 'zustand'
 import { useSettingsStore } from '@/store/settingsStore'
 import { generateChatResponse } from '@/utils/aiClient'
+import type { AiProvider } from '@/store/settingsStore'
 
 export type ChatRole = 'user' | 'assistant'
 
@@ -18,6 +19,8 @@ export type ChatSession = {
   messages: ChatMessage[]
   createdAt: number
   updatedAt: number
+  provider?: string
+  projectContext?: string
 }
 
 type ChatState = {
@@ -25,10 +28,15 @@ type ChatState = {
   activeSessionId: string | null
   isStreaming: boolean
   error?: string
+  abortController: AbortController | null
   sendMessage: (content: string) => Promise<void>
   setActiveSession: (id: string) => void
   newSession: () => void
   deleteSession: (id: string) => void
+  editMessage: (sessionId: string, messageId: string, newContent: string) => void
+  stopGeneration: () => void
+  setSessionProvider: (sessionId: string, provider: string) => void
+  setSessionProjectContext: (sessionId: string, projectPath: string) => Promise<void>
 }
 
 const createMessage = (role: ChatRole, content: string): ChatMessage => ({
@@ -60,6 +68,7 @@ const chatCreator: StateCreator<ChatState> = (set, get) => ({
   sessions: [createSession('Sessão inicial')],
   activeSessionId: null,
   isStreaming: false,
+  abortController: null,
   sendMessage: async (content: string) => {
     const trimmed = content.trim()
     if (!trimmed) {
@@ -92,18 +101,26 @@ const chatCreator: StateCreator<ChatState> = (set, get) => ({
       updatedAt: Date.now(),
     }
 
-    set({ sessions: nextSessions, isStreaming: true, error: undefined })
+    const abortController = new AbortController()
+    set({ sessions: nextSessions, isStreaming: true, error: undefined, abortController })
 
     try {
-      const apiKey = providerState.apiKeys[providerState.provider]
-      if (!apiKey && providerState.provider !== 'ollama') {
+      const provider = targetSession.provider || providerState.provider
+      const apiKey = providerState.apiKeys[provider as AiProvider]
+      if (!apiKey && provider !== 'ollama') {
         throw new Error('API key não configurada para este provedor')
       }
 
+      // Adiciona contexto do projeto se disponível
+      let finalPrompt = trimmed
+      if (targetSession.projectContext) {
+        finalPrompt = `Contexto do projeto:\n${targetSession.projectContext}\n\nPergunta: ${trimmed}`
+      }
+
       const response = await generateChatResponse({
-        provider: providerState.provider,
+        provider: provider as AiProvider,
         api_key: apiKey || '',
-        prompt: trimmed,
+        prompt: finalPrompt,
         history: targetSession.messages,
       })
 
@@ -119,11 +136,17 @@ const chatCreator: StateCreator<ChatState> = (set, get) => ({
               }
             : session,
         )
-        return { sessions: updatedSessions, isStreaming: false }
+        return { sessions: updatedSessions, isStreaming: false, abortController: null }
       })
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        set({ isStreaming: false, abortController: null })
+        return
+      }
+      
       set({
         isStreaming: false,
+        abortController: null,
         error:
           error instanceof Error
             ? error.message
@@ -151,6 +174,64 @@ const chatCreator: StateCreator<ChatState> = (set, get) => ({
         activeSessionId: nextActive,
       }
     })
+  },
+  editMessage: (sessionId: string, messageId: string, newContent: string) => {
+    set((state) => {
+      const sessions = state.sessions.map((session) => {
+        if (session.id !== sessionId) return session
+
+        const messageIndex = session.messages.findIndex((msg) => msg.id === messageId)
+        if (messageIndex === -1) return session
+
+        // Remove mensagens após a editada
+        const updatedMessages = session.messages.slice(0, messageIndex + 1)
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          content: newContent,
+        }
+
+        return {
+          ...session,
+          messages: updatedMessages,
+          updatedAt: Date.now(),
+        }
+      })
+
+      return { sessions }
+    })
+  },
+  stopGeneration: () => {
+    const { abortController } = get()
+    if (abortController) {
+      abortController.abort()
+      set({ isStreaming: false, abortController: null })
+    }
+  },
+  setSessionProvider: (sessionId: string, provider: string) => {
+    set((state) => ({
+      sessions: state.sessions.map((session) =>
+        session.id === sessionId ? { ...session, provider } : session
+      ),
+    }))
+  },
+  setSessionProjectContext: async (sessionId: string, projectPath: string) => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const analysis = await invoke<{ summary: string }>('analyze_project_structure', {
+        path: projectPath,
+      })
+
+      set((state) => ({
+        sessions: state.sessions.map((session) =>
+          session.id === sessionId
+            ? { ...session, projectContext: analysis.summary }
+            : session
+        ),
+      }))
+    } catch (error) {
+      console.error('Erro ao analisar projeto:', error)
+      throw error
+    }
   },
 })
 
