@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply min-h-screen bg-slate-100 text-slate-900 antialiased transition-colors duration-200 ease-out;
+}
+
+body.dark {
+  @apply bg-slate-950 text-slate-100;
+}
+
+#root {
+  @apply h-screen;
+}
+
+/* Custom Scrollbar Styles - WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-200/50 dark:bg-slate-800/50 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400/60 dark:bg-slate-600/60 rounded-full transition-colors;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500/80 dark:bg-slate-500/80;
+}
+
+::-webkit-scrollbar-thumb:active {
+  @apply bg-brand/70 dark:bg-brand-light/70;
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.6) rgb(226 232 240 / 0.5);
+}
+
+.dark * {
+  scrollbar-color: rgb(71 85 105 / 0.6) rgb(30 41 59 / 0.5);
+}
+
+@layer utilities {
+  .bg-brand {
+    @apply bg-purple-600;
+  }
+  
+  .bg-brand-light {
+    @apply bg-purple-400;
+  }
+  
+  .bg-brand-dark {
+    @apply bg-purple-700;
+  }
+  
+  .text-brand {
+    @apply text-purple-600;
+  }
+  
+  .text-brand-light {
+    @apply text-purple-400;
+  }
+  
+  .border-brand {
+    @apply border-purple-600;
+  }
+}
