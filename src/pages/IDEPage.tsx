@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FileText,
   Folder,
@@ -20,9 +20,16 @@ import {
   FileType,
   Braces,
   GitBranch,
+  Sparkles,
+  Lightbulb,
+  Wand2,
+  MessageSquare,
+  Send,
 } from 'lucide-react'
 import { isTauri } from '@/utils/platform'
 import { useIDEStore } from '@/store/ideStore'
+import { useSettingsStore } from '@/store/settingsStore'
+import Terminal from '@/components/Terminal'
 
 type FileNode = {
   name: string
@@ -43,6 +50,8 @@ type OpenFile = {
 export default function IDEPage() {
   const lastOpenedPath = useIDEStore((state) => state.lastOpenedPath)
   const setLastOpenedPath = useIDEStore((state) => state.setLastOpenedPath)
+  const aiProvider = useSettingsStore((state) => state.aiProvider)
+  const apiKey = useSettingsStore((state) => state.apiKeys[state.aiProvider])
   
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([])
@@ -55,6 +64,61 @@ export default function IDEPage() {
   const [showTerminal, setShowTerminal] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const [loadingDir, setLoadingDir] = useState<string | null>(null)
+  const preRef = useRef<HTMLPreElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // AI Assist states
+  const [showAIPanel, setShowAIPanel] = useState(false)
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiChat, setAiChat] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([])
+
+  // Estados para redimensionamento
+  const [sidebarWidth, setSidebarWidth] = useState(256) // 64 * 4 = 256px (w-64)
+  const [terminalHeight, setTerminalHeight] = useState(300)
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false)
+  const [isResizingTerminal, setIsResizingTerminal] = useState(false)
+
+  // Handlers de redimensionamento
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSidebar) {
+        const newWidth = e.clientX
+        if (newWidth >= 200 && newWidth <= 600) {
+          setSidebarWidth(newWidth)
+        }
+      }
+      if (isResizingTerminal) {
+        const newHeight = window.innerHeight - e.clientY
+        if (newHeight >= 100 && newHeight <= 600) {
+          setTerminalHeight(newHeight)
+        }
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false)
+      setIsResizingTerminal(false)
+    }
+
+    if (isResizingSidebar || isResizingTerminal) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = isResizingSidebar ? 'ew-resize' : 'ns-resize'
+      document.body.style.userSelect = 'none'
+    } else {
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizingSidebar, isResizingTerminal])
 
   useEffect(() => {
     if (isTauri() && !initialized) {
@@ -278,6 +342,150 @@ export default function IDEPage() {
     }
   }
 
+  // AI Assist Functions
+  const analyzeCodeContext = async () => {
+    if (!activeFile || !apiKey) return
+
+    const file = openFiles.find(f => f.path === activeFile)
+    if (!file) return
+
+    setAiLoading(true)
+    try {
+      if (!isTauri()) {
+        // Mock suggestions for development
+        setAiSuggestions([
+          'Adicionar tratamento de erro com try-catch',
+          'Extrair esta lógica para uma função separada',
+          'Adicionar validação de entrada',
+          'Otimizar este loop usando map/filter',
+          'Adicionar comentários JSDoc',
+        ])
+        setAiLoading(false)
+        return
+      }
+
+      const { invoke } = await import('@tauri-apps/api/core')
+      const response = await invoke<{ suggestions: string[] }>('ai_analyze_code', {
+        provider: aiProvider,
+        apiKey,
+        code: file.content,
+        language: file.language,
+      })
+
+      setAiSuggestions(response.suggestions)
+    } catch (error) {
+      console.error('AI analysis failed:', error)
+      setAiSuggestions([])
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const generateCodeWithAI = async (prompt: string) => {
+    if (!apiKey) {
+      alert('Configure sua chave de API nas configurações')
+      return
+    }
+
+    setAiLoading(true)
+    try {
+      if (!isTauri()) {
+        // Mock response for development
+        const mockCode = `// Código gerado pela IA\nfunction exemplo() {\n  // ${prompt}\n  return "Exemplo de código gerado";\n}`
+        setAiChat(prev => [
+          ...prev,
+          { role: 'user', content: prompt },
+          { role: 'assistant', content: mockCode }
+        ])
+        setAiLoading(false)
+        return
+      }
+
+      const { invoke } = await import('@tauri-apps/api/core')
+      const file = activeFile ? openFiles.find(f => f.path === activeFile) : null
+      
+      const response = await invoke<{ code: string }>('ai_generate_code', {
+        provider: aiProvider,
+        apiKey,
+        prompt,
+        context: file?.content || '',
+        language: file?.language || 'javascript',
+      })
+
+      setAiChat(prev => [
+        ...prev,
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: response.code }
+      ])
+    } catch (error) {
+      console.error('AI generation failed:', error)
+      setAiChat(prev => [
+        ...prev,
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: `Erro ao gerar código: ${error}` }
+      ])
+    } finally {
+      setAiLoading(false)
+      setAiPrompt('')
+    }
+  }
+
+  const insertAICode = (code: string) => {
+    if (!activeFile) return
+
+    const file = openFiles.find(f => f.path === activeFile)
+    if (!file) return
+
+    // Extract code from markdown code blocks if present
+    const codeMatch = code.match(/```[\w]*\n([\s\S]*?)```/)
+    const cleanCode = codeMatch ? codeMatch[1] : code
+
+    const updatedContent = file.content + '\n\n' + cleanCode
+    
+    setOpenFiles(openFiles.map(f => 
+      f.path === activeFile 
+        ? { ...f, content: updatedContent, modified: true }
+        : f
+    ))
+  }
+
+  const explainSelectedCode = async () => {
+    if (!activeFile || !apiKey) return
+
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const selectedText = textarea.value.substring(
+      textarea.selectionStart,
+      textarea.selectionEnd
+    )
+
+    if (!selectedText) {
+      alert('Selecione um trecho de código para explicar')
+      return
+    }
+
+    await generateCodeWithAI(`Explique o seguinte código:\n\n${selectedText}`)
+  }
+
+  const refactorCode = async () => {
+    if (!activeFile || !apiKey) return
+
+    const file = openFiles.find(f => f.path === activeFile)
+    if (!file) return
+
+    await generateCodeWithAI(`Refatore e melhore o seguinte código:\n\n${file.content}`)
+  }
+
+  const addComments = async () => {
+    if (!activeFile || !apiKey) return
+
+    const file = openFiles.find(f => f.path === activeFile)
+    if (!file) return
+
+    await generateCodeWithAI(`Adicione comentários explicativos ao seguinte código:\n\n${file.content}`)
+  }
+
   const runTerminalCommand = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!terminalInput.trim()) return
@@ -332,54 +540,172 @@ export default function IDEPage() {
   }
 
   const highlightCode = (code: string, language: string) => {
-    // Padrões de regex para syntax highlighting básico
+    // Cores VIBRANTES - Paleta RZOne Harmony (Azul → Roxo → Rosa)
+    const colors = {
+      comment: 'text-[#6A9955] italic',              // Verde para comentários
+      keyword: 'text-[#C586C0] font-semibold',        // ROXO/MAGENTA vibrante - keywords
+      type: 'text-[#4EC9B0]',                         // Cyan - tipos
+      literal: 'text-[#569CD6]',                      // AZUL vibrante - true/false/null
+      number: 'text-[#B5CEA8]',                       // Verde claro - números
+      string: 'text-[#CE9178]',                       // Laranja/Salmão - strings
+      function: 'text-[#DCDCAA]',                     // Amarelo - funções
+      operator: 'text-[#D4D4D4]',                     // Cinza claro - operadores
+      variable: 'text-[#9CDCFE]',                     // Azul claro - variáveis
+      property: 'text-[#9CDCFE]',                     // Azul claro - propriedades
+      className: 'text-[#4EC9B0]',                    // Cyan - classes
+      constant: 'text-[#4FC1FF]',                     // Azul brilhante - constantes
+      module: 'text-[#4EC9B0]',                       // Cyan - módulos
+      punctuation: 'text-[#D4D4D4]',                  // Cinza - pontuação
+      decorator: 'text-[#DCDCAA]',                    // Amarelo - decorators
+      tag: 'text-[#569CD6]',                          // AZUL - tags HTML
+      attribute: 'text-[#9CDCFE]',                    // Azul claro - atributos
+    }
+    
+    const defaultColors = colors
+    
+    // Padrões de regex para syntax highlighting avançado
     const patterns: Record<string, Array<{ pattern: RegExp; className: string }>> = {
       javascript: [
-        { pattern: /(\/\/.*$)/gm, className: 'text-slate-500 italic' },
-        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-slate-500 italic' },
-        { pattern: /\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|class|extends|import|export|from|default|async|await|try|catch|throw|new)\b/g, className: 'text-purple-400 font-semibold' },
-        { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-orange-400' },
-        { pattern: /\b(\d+)\b/g, className: 'text-green-400' },
-        { pattern: /(["'`])(.*?)\1/g, className: 'text-yellow-300' },
+        // Comentários
+        { pattern: /(\/\/.*$)/gm, className: colors.comment },
+        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: colors.comment },
+        // Strings (antes de keywords para evitar conflito)
+        { pattern: /(["'`])(?:(?=(\\?))\2.)*?\1/g, className: colors.string },
+        // Keywords
+        { pattern: /\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|class|extends|import|export|from|default|async|await|try|catch|throw|new|in|of|typeof|instanceof)\b/g, className: colors.keyword },
+        // Funções (nome seguido de parênteses)
+        { pattern: /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, className: colors.function },
+        // Classes (após new ou class)
+        { pattern: /\b(class|new)\s+([A-Z][a-zA-Z0-9_]*)/g, className: colors.className },
+        // Constantes (UPPERCASE)
+        { pattern: /\b([A-Z][A-Z0-9_]*)\b/g, className: colors.constant },
+        // Literais
+        { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: colors.literal },
+        // Números
+        { pattern: /\b(\d+\.?\d*)\b/g, className: colors.number },
+        // Propriedades (após ponto)
+        { pattern: /\.([a-zA-Z_$][a-zA-Z0-9_$]*)/g, className: colors.property },
       ],
       typescript: [
-        { pattern: /(\/\/.*$)/gm, className: 'text-slate-500 italic' },
-        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-slate-500 italic' },
-        { pattern: /\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|class|extends|import|export|from|default|async|await|try|catch|throw|new|interface|type|enum|public|private|protected|readonly)\b/g, className: 'text-purple-400 font-semibold' },
-        { pattern: /\b(string|number|boolean|any|void|never|unknown)\b/g, className: 'text-cyan-400' },
-        { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-orange-400' },
-        { pattern: /\b(\d+)\b/g, className: 'text-green-400' },
-        { pattern: /(["'`])(.*?)\1/g, className: 'text-yellow-300' },
+        // Comentários
+        { pattern: /(\/\/.*$)/gm, className: colors.comment },
+        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: colors.comment },
+        // Strings
+        { pattern: /(["'`])(?:(?=(\\?))\2.)*?\1/g, className: colors.string },
+        // Keywords
+        { pattern: /\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|class|extends|import|export|from|default|async|await|try|catch|throw|new|interface|type|enum|public|private|protected|readonly|static|implements|namespace|module|declare|abstract|as|in|of|typeof|instanceof)\b/g, className: colors.keyword },
+        // Tipos (após : ou <)
+        { pattern: /:\s*([A-Z][a-zA-Z0-9_<>[\]|&]*)/g, className: colors.type },
+        { pattern: /\b(string|number|boolean|any|void|never|unknown|Promise|Array|Map|Set|Record|Partial|Required|Pick|Omit)\b/g, className: colors.type },
+        // Funções
+        { pattern: /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, className: colors.function },
+        // Classes
+        { pattern: /\b(class|new|extends|implements)\s+([A-Z][a-zA-Z0-9_]*)/g, className: colors.className },
+        // Interfaces/Types
+        { pattern: /\b(interface|type)\s+([A-Z][a-zA-Z0-9_]*)/g, className: colors.type },
+        // Constantes
+        { pattern: /\b([A-Z][A-Z0-9_]*)\b/g, className: colors.constant },
+        // Literais
+        { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: colors.literal },
+        // Números
+        { pattern: /\b(\d+\.?\d*)\b/g, className: colors.number },
+        // Propriedades
+        { pattern: /\.([a-zA-Z_$][a-zA-Z0-9_$]*)/g, className: colors.property },
       ],
       python: [
-        { pattern: /(#.*$)/gm, className: 'text-slate-500 italic' },
-        { pattern: /("""[\s\S]*?"""|'''[\s\S]*?''')/g, className: 'text-slate-500 italic' },
-        { pattern: /\b(def|class|return|if|elif|else|for|while|break|continue|pass|import|from|as|try|except|finally|raise|with|yield|lambda|global|nonlocal)\b/g, className: 'text-purple-400 font-semibold' },
-        { pattern: /\b(True|False|None)\b/g, className: 'text-orange-400' },
-        { pattern: /\b(\d+)\b/g, className: 'text-green-400' },
-        { pattern: /(["'])(.*?)\1/g, className: 'text-yellow-300' },
+        // Comentários
+        { pattern: /(#.*$)/gm, className: colors.comment },
+        { pattern: /("""[\s\S]*?"""|'''[\s\S]*?''')/g, className: colors.comment },
+        // Strings
+        { pattern: /(["'])(?:(?=(\\?))\2.)*?\1/g, className: colors.string },
+        { pattern: /(f["'])(?:(?=(\\?))\2.)*?\1/g, className: colors.string },
+        // Decorators
+        { pattern: /(@[a-zA-Z_][a-zA-Z0-9_]*)/g, className: colors.decorator },
+        // Keywords
+        { pattern: /\b(def|class|return|if|elif|else|for|while|break|continue|pass|import|from|as|try|except|finally|raise|with|yield|lambda|global|nonlocal|and|or|not|in|is|None|assert|del|exec|print)\b/g, className: colors.keyword },
+        // Funções
+        { pattern: /\b(def)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g, className: colors.function },
+        // Classes
+        { pattern: /\b(class)\s+([A-Z][a-zA-Z0-9_]*)/g, className: colors.className },
+        // Constantes/Classes
+        { pattern: /\b([A-Z][A-Z0-9_]*)\b/g, className: colors.constant },
+        // Literais
+        { pattern: /\b(True|False|None)\b/g, className: colors.literal },
+        // Números
+        { pattern: /\b(\d+\.?\d*)\b/g, className: colors.number },
+        // Propriedades
+        { pattern: /\.([a-zA-Z_][a-zA-Z0-9_]*)/g, className: colors.property },
       ],
       rust: [
-        { pattern: /(\/\/.*$)/gm, className: 'text-slate-500 italic' },
-        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-slate-500 italic' },
-        { pattern: /\b(fn|let|mut|const|struct|enum|impl|trait|pub|use|mod|crate|self|super|type|where|unsafe|async|await|move|ref|static|match|if|else|loop|for|while|break|continue|return)\b/g, className: 'text-purple-400 font-semibold' },
-        { pattern: /\b(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f32|f64|bool|char|str|String|Vec|Option|Result)\b/g, className: 'text-cyan-400' },
-        { pattern: /\b(true|false|Some|None|Ok|Err)\b/g, className: 'text-orange-400' },
-        { pattern: /\b(\d+)\b/g, className: 'text-green-400' },
-        { pattern: /(["'])(.*?)\1/g, className: 'text-yellow-300' },
+        // Comentários
+        { pattern: /(\/\/.*$)/gm, className: colors.comment },
+        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: colors.comment },
+        // Strings
+        { pattern: /(["'])(?:(?=(\\?))\2.)*?\1/g, className: colors.string },
+        // Macros
+        { pattern: /\b([a-z_][a-z0-9_]*!)/g, className: colors.function },
+        // Keywords
+        { pattern: /\b(fn|let|mut|const|struct|enum|impl|trait|pub|use|mod|crate|self|super|type|where|unsafe|async|await|move|ref|static|match|if|else|loop|for|while|break|continue|return|as|dyn)\b/g, className: colors.keyword },
+        // Tipos primitivos
+        { pattern: /\b(i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize|f32|f64|bool|char|str)\b/g, className: colors.type },
+        // Tipos compostos
+        { pattern: /\b(String|Vec|Option|Result|Box|Rc|Arc|RefCell|HashMap|HashSet|BTreeMap|BTreeSet)\b/g, className: colors.type },
+        // Funções
+        { pattern: /\b(fn)\s+([a-z_][a-z0-9_]*)/g, className: colors.function },
+        // Structs/Enums
+        { pattern: /\b(struct|enum|trait)\s+([A-Z][a-zA-Z0-9_]*)/g, className: colors.className },
+        // Literais
+        { pattern: /\b(true|false|Some|None|Ok|Err)\b/g, className: colors.literal },
+        // Números
+        { pattern: /\b(\d+\.?\d*)\b/g, className: colors.number },
+        // Propriedades
+        { pattern: /\.([a-z_][a-z0-9_]*)/g, className: colors.property },
       ],
       json: [
-        { pattern: /("(?:[^"\\]|\\.)*")\s*:/g, className: 'text-blue-400' },
-        { pattern: /:\s*("(?:[^"\\]|\\.)*")/g, className: 'text-yellow-300' },
-        { pattern: /\b(true|false|null)\b/g, className: 'text-orange-400' },
-        { pattern: /:\s*(-?\d+\.?\d*)/g, className: 'text-green-400' },
+        // Chaves (propriedades)
+        { pattern: /("(?:[^"\\]|\\.)*")\s*:/g, className: colors.property },
+        // Valores string
+        { pattern: /:\s*("(?:[^"\\]|\\.)*")/g, className: colors.string },
+        // Literais
+        { pattern: /\b(true|false|null)\b/g, className: colors.literal },
+        // Números
+        { pattern: /:\s*(-?\d+\.?\d*)/g, className: colors.number },
+      ],
+      html: [
+        // Comentários
+        { pattern: /(<!--[\s\S]*?-->)/g, className: colors.comment },
+        // Tags de abertura/fechamento
+        { pattern: /(<\/?)([\w-]+)/g, className: colors.tag },
+        // Atributos
+        { pattern: /\s+([\w-]+)=/g, className: colors.attribute },
+        // Valores de atributos
+        { pattern: /=(["'])([^"']*)\1/g, className: colors.string },
+        // Doctype
+        { pattern: /(<!DOCTYPE\s+html>)/gi, className: colors.keyword },
+      ],
+      css: [
+        // Comentários
+        { pattern: /(\/\*[\s\S]*?\*\/)/g, className: colors.comment },
+        // Seletores
+        { pattern: /([.#]?[\w-]+)(?=\s*{)/g, className: colors.className },
+        // Propriedades
+        { pattern: /([\w-]+)(?=\s*:)/g, className: colors.property },
+        // Valores
+        { pattern: /:\s*([^;{]+)/g, className: colors.string },
+        // Números com unidades
+        { pattern: /\b(\d+)(px|em|rem|%|vh|vw)?\b/g, className: colors.number },
+        // Cores hex
+        { pattern: /(#[0-9a-fA-F]{3,6})/g, className: colors.number },
       ],
     }
 
     const langPatterns = patterns[language] || patterns.javascript
     
+    // Cor de texto padrão - cinza claro, não branco
+    const defaultTextColor = 'text-[#D4D4D4]'
+    
     return (
-      <span className="text-slate-100">
+      <span className={defaultTextColor}>
         {code.split('\n').map((line, i) => (
           <span key={i} className="block">
             {applyHighlight(line, langPatterns)}
@@ -625,12 +951,12 @@ export default function IDEPage() {
   const activeFileData = openFiles.find((f) => f.path === activeFile)
 
   return (
-    <div className="flex h-full flex-col">
+    <div id="ide-page" className="flex h-full flex-col">
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-slate-300/50 bg-white/60 px-4 py-3 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40">
         <div className="flex items-center gap-3">
           <Code2 className="h-5 w-5 text-brand" />
-          <h2 className="font-semibold text-slate-900 dark:text-white">IDE</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-300">IDE</h2>
           {projectPath && (
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {projectPath}
@@ -639,8 +965,24 @@ export default function IDEPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => {
+              setShowAIPanel(!showAIPanel)
+              if (!showAIPanel && activeFile) {
+                analyzeCodeContext()
+              }
+            }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              showAIPanel
+                ? 'bg-brand text-white hover:bg-brand-dark'
+                : 'border border-slate-300/50 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-700/50 dark:text-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            AI Assist
+          </button>
+          <button
             onClick={selectFolder}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark dark:bg-brand-light dark:hover:bg-brand"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold transition hover:bg-brand-dark dark:bg-brand-light dark:hover:bg-brand"
           >
             Abrir Pasta
           </button>
@@ -659,7 +1001,10 @@ export default function IDEPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - File Explorer */}
-        <div className="w-64 border-r border-slate-300/50 bg-white/40 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/20">
+        <div 
+          className="border-r border-slate-300/50 bg-white/40 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/20"
+          style={{ width: `${sidebarWidth}px` }}
+        >
           <div className="border-b border-slate-300/50 px-4 py-3 dark:border-slate-700/50">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               EXPLORADOR
@@ -674,6 +1019,14 @@ export default function IDEPage() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Resize Handle - Sidebar */}
+        <div
+          className="group w-1 cursor-ew-resize bg-slate-300/30 hover:bg-brand/50 dark:bg-slate-700/30 dark:hover:bg-brand/50 transition-colors"
+          onMouseDown={() => setIsResizingSidebar(true)}
+        >
+          <div className="h-full w-full group-hover:bg-brand/20 transition-colors" />
         </div>
 
         {/* Main Editor Area */}
@@ -717,17 +1070,27 @@ export default function IDEPage() {
           <div className="flex-1 overflow-hidden bg-slate-900 dark:bg-slate-950">
             {activeFileData ? (
               <div className="relative h-full">
-                <pre className="h-full overflow-auto p-4 font-mono text-sm leading-relaxed">
+                <pre 
+                  ref={preRef}
+                  className="h-full overflow-auto p-4 font-mono text-sm leading-relaxed pointer-events-none"
+                >
                   <code className={`language-${activeFileData.language}`}>
                     {highlightCode(activeFileData.content, activeFileData.language)}
                   </code>
                 </pre>
                 <textarea
+                  ref={textareaRef}
                   value={activeFileData.content}
                   onChange={(e) =>
                     updateFileContent(activeFileData.path, e.target.value)
                   }
-                  className="absolute inset-0 h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-relaxed text-transparent caret-white focus:outline-none"
+                  onScroll={(e) => {
+                    if (preRef.current) {
+                      preRef.current.scrollTop = e.currentTarget.scrollTop
+                      preRef.current.scrollLeft = e.currentTarget.scrollLeft
+                    }
+                  }}
+                  className="absolute inset-0 h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-relaxed text-transparent focus:outline-none"
                   style={{ caretColor: '#3b82f6' }}
                   spellCheck={false}
                 />
@@ -744,65 +1107,146 @@ export default function IDEPage() {
             )}
           </div>
 
-          {/* Terminal */}
-          {showTerminal && (
-            <div className="flex h-64 flex-col border-t border-slate-300/50 bg-slate-900 dark:border-slate-700/50">
-              <div className="flex items-center justify-between border-b border-slate-700 px-4 py-2">
-                <div className="flex items-center gap-2 text-sm text-slate-300">
-                  <TerminalIcon className="h-4 w-4" />
-                  <span>Terminal</span>
-                </div>
-                <button
-                  onClick={() => setShowTerminal(false)}
-                  className="text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+          {/* Terminal Melhorado */}
+          <Terminal />
+        </div>
+
+        {/* AI Assist Panel */}
+        {showAIPanel && (
+          <div className="w-96 border-l border-slate-300/50 bg-white/60 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40 flex flex-col">
+            <div className="border-b border-slate-300/50 px-4 py-3 dark:border-slate-700/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand" />
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  AI Assistant
+                </h3>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 font-mono text-sm">
-                {terminalOutput.map((line, i) => (
-                  <div
-                    key={i}
-                    className={
-                      line.startsWith('$')
-                        ? 'text-green-400'
-                        : line.startsWith('✗')
-                        ? 'text-red-400'
-                        : line.startsWith('✓')
-                        ? 'text-green-400'
-                        : 'text-slate-300'
-                    }
-                  >
-                    {line}
+              <button
+                onClick={() => setShowAIPanel(false)}
+                className="p-1 hover:bg-slate-200/50 rounded dark:hover:bg-slate-700/50"
+              >
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="p-4 border-b border-slate-300/50 dark:border-slate-700/50 space-y-2">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">AÇÕES RÁPIDAS</p>
+              <button
+                onClick={explainSelectedCode}
+                disabled={aiLoading || !activeFile}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <MessageSquare className="h-4 w-4 text-blue-500" />
+                <span className="text-slate-700 dark:text-slate-300">Explicar Código Selecionado</span>
+              </button>
+              <button
+                onClick={refactorCode}
+                disabled={aiLoading || !activeFile}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Wand2 className="h-4 w-4 text-purple-500" />
+                <span className="text-slate-700 dark:text-slate-300">Refatorar Código</span>
+              </button>
+              <button
+                onClick={addComments}
+                disabled={aiLoading || !activeFile}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileText className="h-4 w-4 text-green-500" />
+                <span className="text-slate-700 dark:text-slate-300">Adicionar Comentários</span>
+              </button>
+              <button
+                onClick={analyzeCodeContext}
+                disabled={aiLoading || !activeFile}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                <span className="text-slate-700 dark:text-slate-300">Analisar & Sugerir</span>
+              </button>
+            </div>
+
+            {/* Suggestions */}
+            {aiSuggestions.length > 0 && (
+              <div className="p-4 border-b border-slate-300/50 dark:border-slate-700/50">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">SUGESTÕES</p>
+                <div className="space-y-2">
+                  {aiSuggestions.map((suggestion, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-2 bg-yellow-50/50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200/50 dark:border-yellow-800/30">
+                      <Lightbulb className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{suggestion}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Chat with AI */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {aiChat.length === 0 && !aiLoading && (
+                  <div className="text-center py-8">
+                    <Sparkles className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Faça uma pergunta ou peça para gerar código
+                    </p>
+                  </div>
+                )}
+                {aiChat.map((msg, idx) => (
+                  <div key={idx} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`max-w-[85%] rounded-lg p-3 ${
+                      msg.role === 'user'
+                        ? 'bg-brand text-white'
+                        : 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
+                    }`}>
+                      <pre className="text-xs whitespace-pre-wrap font-mono">{msg.content}</pre>
+                    </div>
+                    {msg.role === 'assistant' && (
+                      <button
+                        onClick={() => insertAICode(msg.content)}
+                        className="text-xs px-2 py-1 bg-brand/10 hover:bg-brand/20 text-brand rounded transition"
+                      >
+                        Inserir no editor
+                      </button>
+                    )}
                   </div>
                 ))}
+                {aiLoading && (
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">Gerando resposta...</span>
+                  </div>
+                )}
               </div>
-              <form onSubmit={runTerminalCommand} className="border-t border-slate-700 p-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-green-400">$</span>
+
+              {/* Input */}
+              <div className="border-t border-slate-300/50 dark:border-slate-700/50 p-3">
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  if (aiPrompt.trim()) {
+                    generateCodeWithAI(aiPrompt)
+                  }
+                }} className="flex gap-2">
                   <input
                     type="text"
-                    value={terminalInput}
-                    onChange={(e) => setTerminalInput(e.target.value)}
-                    className="flex-1 bg-transparent font-mono text-sm text-slate-100 focus:outline-none"
-                    placeholder="Digite um comando..."
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Pergunte algo ou peça código..."
+                    disabled={aiLoading}
+                    className="flex-1 px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/50 text-slate-900 dark:text-white disabled:opacity-50"
                   />
-                </div>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={aiLoading || !aiPrompt.trim()}
+                    className="p-2 bg-brand hover:bg-brand-dark text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+              </div>
             </div>
-          )}
-
-          {/* Toggle Terminal Button */}
-          {!showTerminal && (
-            <button
-              onClick={() => setShowTerminal(true)}
-              className="flex items-center gap-2 border-t border-slate-300/50 bg-white/60 px-4 py-2 text-sm text-slate-700 hover:bg-white/80 dark:border-slate-700/50 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800/60"
-            >
-              <TerminalIcon className="h-4 w-4" />
-              Mostrar Terminal
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

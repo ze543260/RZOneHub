@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './theme-overrides.css';
+
 :root {
   color-scheme: light;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -9,18 +11,299 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Default theme variables - will be overridden by theme system */
+  --theme-bg: 248 250 252;
+  --theme-bg-secondary: 241 245 249;
+  --theme-text: 15 23 42;
+  --theme-text-secondary: 71 85 105;
+  --theme-border: 226 232 240;
+  --theme-accent: 139 92 246;
 }
 
 body {
-  @apply min-h-screen bg-slate-100 text-slate-900 antialiased transition-colors duration-200 ease-out;
+  @apply min-h-screen antialiased transition-colors duration-200 ease-out;
+  background-color: rgb(var(--theme-bg));
+  color: rgb(var(--theme-text));
+  position: relative;
 }
 
-body.dark {
-  @apply bg-slate-950 text-slate-100;
+/* RZOne Harmony Theme - Subtle gradient accents */
+.theme-rzone-harmony body::before {
+  content: "";
+  position: fixed;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(147, 51, 234, 0.10) 35%,
+    rgba(236, 72, 153, 0.05) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  animation: rzoneGradientFloat 25s ease-in-out infinite;
+}
+
+/* Light mode - more subtle gradient */
+.light.theme-rzone-harmony body::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(147, 51, 234, 0.05) 35%,
+    rgba(236, 72, 153, 0.03) 70%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+.dark.theme-rzone-harmony body::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(96, 165, 250, 0.12) 0%,
+    rgba(168, 85, 247, 0.08) 35%,
+    rgba(244, 114, 182, 0.04) 70%,
+    transparent 100%
+  );
+}
+
+@keyframes rzoneGradientFloat {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  33% { 
+    transform: translate(-10%, 10%) scale(1.1);
+    opacity: 0.6;
+  }
+  66% { 
+    transform: translate(10%, -10%) scale(0.9);
+    opacity: 0.5;
+  }
+}
+
+/* RZOne Harmony - Accent glow effect on interactive elements */
+.theme-rzone-harmony .bg-brand,
+.theme-rzone-harmony button.bg-brand,
+.theme-rzone-harmony [class*="bg-brand"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%) !important;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-rzone-harmony .bg-brand::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.theme-rzone-harmony .bg-brand:hover::before {
+  left: 100%;
+}
+
+.theme-rzone-harmony .bg-brand:hover,
+.theme-rzone-harmony button.bg-brand:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+/* RZOne Harmony - Border accent with gradient */
+.theme-rzone-harmony .border-brand {
+  border-color: rgb(59, 130, 246) !important;
+}
+
+/* RZOne Harmony - Text with gradient */
+.theme-rzone-harmony .text-brand {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* RZOne Harmony - Glassmorphism with subtle tint */
+.theme-rzone-harmony .backdrop-blur-md,
+.theme-rzone-harmony .backdrop-blur-sm {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  backdrop-filter: blur(12px) saturate(180%);
+}
+
+.dark.theme-rzone-harmony .backdrop-blur-md,
+.dark.theme-rzone-harmony .backdrop-blur-sm {
+  background: rgba(31, 41, 55, 0.7) !important;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  backdrop-filter: blur(16px) saturate(200%);
+}
+
+/* ============================================ */
+/* IDE - SYNTAX COLORS SUPER VIBRANTES */
+/* Paleta RZOne Harmony: Azul → Roxo → Rosa */
+/* ============================================ */
+
+/* Remover texto branco da IDE globalmente */
+#ide-page,
+#ide-page *:not(.text-\[*\]) {
+  color: #D4D4D4 !important;
+}
+
+#ide-page pre,
+#ide-page code {
+  color: #D4D4D4 !important;
+  text-shadow: none;
+}
+
+/* KEYWORDS - ROXO/MAGENTA VIBRANTE */
+#ide-page .text-\[\#C586C0\] {
+  color: #C586C0 !important;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(197, 134, 192, 0.5);
+}
+
+/* TIPOS - CYAN */
+#ide-page .text-\[\#4EC9B0\] {
+  color: #4EC9B0 !important;
+  text-shadow: 0 0 6px rgba(78, 201, 176, 0.4);
+}
+
+/* LITERAIS - AZUL VIBRANTE */
+#ide-page .text-\[\#569CD6\] {
+  color: #569CD6 !important;
+  text-shadow: 0 0 8px rgba(86, 156, 214, 0.5);
+}
+
+/* STRINGS - LARANJA/SALMÃO */
+#ide-page .text-\[\#CE9178\] {
+  color: #CE9178 !important;
+  text-shadow: 0 0 6px rgba(206, 145, 120, 0.4);
+}
+
+/* FUNÇÕES - AMARELO DOURADO */
+#ide-page .text-\[\#DCDCAA\] {
+  color: #DCDCAA !important;
+  text-shadow: 0 0 6px rgba(220, 220, 170, 0.4);
+}
+
+/* VARIÁVEIS/PROPRIEDADES - AZUL CLARO */
+#ide-page .text-\[\#9CDCFE\] {
+  color: #9CDCFE !important;
+  text-shadow: 0 0 6px rgba(156, 220, 254, 0.4);
+}
+
+/* NÚMEROS - VERDE CLARO */
+#ide-page .text-\[\#B5CEA8\] {
+  color: #B5CEA8 !important;
+  text-shadow: 0 0 5px rgba(181, 206, 168, 0.3);
+}
+
+/* COMENTÁRIOS - VERDE (sem glow) */
+#ide-page .text-\[\#6A9955\] {
+  color: #6A9955 !important;
+  font-style: italic;
+}
+
+/* CONSTANTES - AZUL BRILHANTE */
+#ide-page .text-\[\#4FC1FF\] {
+  color: #4FC1FF !important;
+  text-shadow: 0 0 8px rgba(79, 193, 255, 0.5);
+}
+
+/* TEXTO PADRÃO - CINZA CLARO */
+#ide-page .text-\[\#D4D4D4\] {
+  color: #D4D4D4 !important;
+}
+
+/* Remove any white text from IDE */
+#ide-page .text-white,
+#ide-page .text-slate-50,
+#ide-page .text-slate-100 {
+  color: #D4D4D4 !important;
+}
+
+/* ============================================ */
+/* RZONE HARMONY - IDE ENHANCEMENTS */
+/* ============================================ */
+
+.theme-rzone-harmony #ide-page {
+  --editor-bg: rgba(15, 23, 42, 0.95);
+  --editor-line-highlight: rgba(59, 130, 246, 0.05);
+  --editor-selection: rgba(59, 130, 246, 0.2);
+}
+
+.light.theme-rzone-harmony #ide-page {
+  --editor-bg: rgba(255, 255, 255, 0.95);
+  --editor-line-highlight: rgba(59, 130, 246, 0.04);
+  --editor-selection: rgba(59, 130, 246, 0.15);
+}
+
+/* IDE cursor with RZone gradient */
+.theme-rzone-harmony #ide-page textarea:focus {
+  caret-color: #3b82f6;
+}
+
+/* IDE default text color - no white */
+.theme-rzone-harmony #ide-page {
+  color: rgb(203, 213, 225);
+}
+
+.light.theme-rzone-harmony #ide-page {
+  color: rgb(51, 65, 85);
+}
+
+/* IDE code container */
+.theme-rzone-harmony #ide-page pre,
+.theme-rzone-harmony #ide-page code {
+  color: rgb(203, 213, 225) !important;
+}
+
+.light.theme-rzone-harmony #ide-page pre,
+.light.theme-rzone-harmony #ide-page code {
+  color: rgb(51, 65, 85) !important;
+}
+
+.theme-rzone-harmony #ide-page .bg-slate-800 {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.light.theme-rzone-harmony #ide-page .bg-slate-800 {
+  background: rgba(248, 250, 252, 0.6) !important;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+@keyframes gradientShift {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.15; }
 }
 
 #root {
   @apply h-screen;
+  position: relative;
+  z-index: 1;
+}
+
+/* Override slate colors with theme colors */
+:root {
+  --color-slate-50: var(--theme-bg);
+  --color-slate-100: var(--theme-bg);
+  --color-slate-900: var(--theme-text);
+  --color-slate-950: var(--theme-bg-secondary);
+}
+
+.dark {
+  --color-slate-50: var(--theme-text);
+  --color-slate-100: var(--theme-text-secondary);
+  --color-slate-900: var(--theme-bg-secondary);
+  --color-slate-950: var(--theme-bg);
 }
 
 /* Custom Scrollbar Styles - WebKit (Chrome, Safari, Edge) */

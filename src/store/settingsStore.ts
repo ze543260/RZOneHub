@@ -3,11 +3,27 @@ import type { StateCreator } from 'zustand'
 import type { Store as TauriStore } from '@tauri-apps/plugin-store'
 import { isTauri } from '@/utils/platform'
 
-export type ThemePreference = 'light' | 'dark' | 'system'
+export type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeName = 
+  | 'default-light' 
+  | 'default-dark'
+  | 'github-light'
+  | 'github-dark'
+  | 'monokai'
+  | 'dracula'
+  | 'nord'
+  | 'solarized-light'
+  | 'solarized-dark'
+  | 'one-dark'
+  | 'tokyo-night'
+  | 'catppuccin'
+  | 'rzone-harmony'
+
 export type AiProvider = 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'cohere' | 'mistral' | 'groq' | 'deepseek'
 
 type PersistedSettings = {
-  theme: ThemePreference
+  themeMode: ThemeMode
+  themeName: ThemeName
   provider: AiProvider
   apiKeys: Partial<Record<AiProvider, string>>
 }
@@ -15,14 +31,16 @@ type PersistedSettings = {
 type SettingsState = PersistedSettings & {
   hydrated: boolean
   initialize: () => Promise<void>
-  setTheme: (value: ThemePreference) => Promise<void>
+  setThemeMode: (value: ThemeMode) => Promise<void>
+  setThemeName: (value: ThemeName) => Promise<void>
   setProvider: (value: AiProvider) => Promise<void>
   setApiKey: (provider: AiProvider, key: string) => Promise<void>
   clearApiKeys: () => Promise<void>
 }
 
 const DEFAULT_SETTINGS: PersistedSettings = {
-  theme: 'system',
+  themeMode: 'system',
+  themeName: 'default-dark',
   provider: 'openai',
   apiKeys: {},
 }
@@ -56,9 +74,9 @@ const storeCreator: StateCreator<SettingsState> = (set, get) => {
       console.log('[Settings] Tauri Store not available')
       return
     }
-    const { theme, provider, apiKeys } = get()
-    console.log('[Settings] Saving to Tauri Store:', { theme, provider, apiKeys })
-    await store.set('settings', { theme, provider, apiKeys })
+    const { themeMode, themeName, provider, apiKeys } = get()
+    console.log('[Settings] Saving to Tauri Store:', { themeMode, themeName, provider, apiKeys })
+    await store.set('settings', { themeMode, themeName, provider, apiKeys })
     await store.save()
     console.log('[Settings] Saved successfully')
   }
@@ -85,8 +103,12 @@ const storeCreator: StateCreator<SettingsState> = (set, get) => {
         set({ hydrated: true })
       }
     },
-    setTheme: async (value: ThemePreference) => {
-      set({ theme: value })
+    setThemeMode: async (value: ThemeMode) => {
+      set({ themeMode: value })
+      await sync()
+    },
+    setThemeName: async (value: ThemeName) => {
+      set({ themeName: value })
       await sync()
     },
     setProvider: async (value: AiProvider) => {

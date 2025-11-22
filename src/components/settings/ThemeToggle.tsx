@@ -8,8 +8,8 @@ const options = [
 ] as const
 
 export default function ThemeToggle() {
-  const theme = useSettingsStore((state) => state.theme)
-  const setTheme = useSettingsStore((state) => state.setTheme)
+  const themeMode = useSettingsStore((state) => state.themeMode)
+  const setThemeMode = useSettingsStore((state) => state.setThemeMode)
 
   return (
     <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
@@ -17,8 +17,8 @@ export default function ThemeToggle() {
         <button
           key={option.value}
           type="button"
-          onClick={() => setTheme(option.value)}
-          className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${theme === option.value ? 'bg-brand/90 text-white shadow-sm hover:bg-brand dark:bg-brand' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'}`}
+          onClick={() => setThemeMode(option.value)}
+          className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 ${themeMode === option.value ? 'bg-brand/90 text-white shadow-sm hover:bg-brand dark:bg-brand' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'}`}
         >
           <option.icon className="h-4 w-4" />
           {option.label}

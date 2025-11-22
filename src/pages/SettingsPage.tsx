@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import type { AiProvider } from '@/store/settingsStore'
 import { useGitHubStore } from '@/store/githubStore'
 import { clsx } from 'clsx'
+import ThemeSelector from '@/components/settings/ThemeSelector'
 
 const PROVIDERS = [
   { value: 'openai', label: 'OpenAI', description: 'GPT-4o, GPT-3.5' },
@@ -17,7 +18,8 @@ const PROVIDERS = [
 ] as const
 
 export default function SettingsPage() {
-  const theme = useSettingsStore((state) => state.theme)
+  const themeMode = useSettingsStore((state) => state.themeMode)
+  const themeName = useSettingsStore((state) => state.themeName)
   const provider = useSettingsStore((state) => state.provider)
   const apiKeys = useSettingsStore((state) => state.apiKeys)
   const setProvider = useSettingsStore((state) => state.setProvider)
@@ -87,18 +89,29 @@ export default function SettingsPage() {
 
       {/* Theme Section */}
       <div className="rounded-xl border border-slate-300/50 bg-white/60 p-6 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40">
+        <ThemeSelector />
+      </div>
+
+      {/* Theme Mode Info */}
+      <div className="rounded-xl border border-slate-300/50 bg-white/60 p-6 shadow-lg backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/40">
         <div className="mb-4 flex items-center gap-2">
           <Shield className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">Aparência</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">Modo de Aparência</h3>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-600 dark:text-slate-400">Tema atual:</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">Modo atual:</span>
           <span className="rounded-lg bg-brand/10 px-3 py-1 text-sm font-medium text-brand dark:bg-brand/20 dark:text-brand-light">
-            {theme === 'light' ? 'Claro' : theme === 'dark' ? 'Escuro' : 'Sistema'}
+            {themeMode === 'light' ? 'Claro' : themeMode === 'dark' ? 'Escuro' : 'Sistema'}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center gap-3">
+          <span className="text-sm text-slate-600 dark:text-slate-400">Tema:</span>
+          <span className="rounded-lg bg-brand/10 px-3 py-1 text-sm font-medium text-brand dark:bg-brand/20 dark:text-brand-light">
+            {themeName}
           </span>
         </div>
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Altere o tema usando o botão no canto superior direito da tela.
+          Altere o modo (claro/escuro) usando o botão no canto inferior direito da tela.
         </p>
       </div>
 

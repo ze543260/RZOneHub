@@ -1,0 +1,670 @@
+/* Theme-aware color overrides */
+
+/* Apply theme colors globally */
+[class*="theme-"] {
+  /* Background colors */
+  --tw-bg-opacity: 1;
+}
+
+/* Light backgrounds with theme colors */
+.bg-white {
+  background-color: rgb(var(--theme-bg) / var(--tw-bg-opacity, 1)) !important;
+}
+
+.bg-slate-50 {
+  background-color: rgb(var(--theme-bg) / var(--tw-bg-opacity, 1)) !important;
+}
+
+.bg-slate-100 {
+  background-color: rgb(var(--theme-bg-secondary) / var(--tw-bg-opacity, 0.6)) !important;
+}
+
+/* Better contrast for light mode cards */
+.light .bg-white\/60,
+.light .bg-white\/80,
+.light [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.light .bg-slate-100\/60 {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+.dark .bg-slate-800 {
+  background-color: rgb(var(--theme-bg-secondary) / var(--tw-bg-opacity, 1)) !important;
+}
+
+.dark .bg-slate-900 {
+  background-color: rgb(var(--theme-bg-secondary) / var(--tw-bg-opacity, 1)) !important;
+}
+
+.dark .bg-slate-950 {
+  background-color: rgb(var(--theme-bg) / var(--tw-bg-opacity, 1)) !important;
+}
+
+/* Text colors */
+.text-slate-900 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.text-slate-800 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.text-slate-700 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.text-slate-600 {
+  color: rgb(var(--theme-text-secondary)) !important;
+}
+
+.text-slate-500 {
+  color: rgb(var(--theme-text-secondary)) !important;
+}
+
+.text-slate-400 {
+  color: rgb(var(--theme-text-secondary)) !important;
+}
+
+/* Better contrast for light mode */
+.light .text-slate-600,
+.light .text-slate-500 {
+  color: rgba(75, 85, 99, 1) !important;
+}
+
+.light .text-slate-400 {
+  color: rgba(107, 114, 128, 1) !important;
+}
+
+.dark .text-white {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.dark .text-slate-100 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.dark .text-slate-200 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.dark .text-slate-300 {
+  color: rgb(var(--theme-text-secondary)) !important;
+}
+
+.dark .text-slate-400 {
+  color: rgb(var(--theme-text-secondary)) !important;
+}
+
+/* Border colors */
+.border-slate-200 {
+  border-color: rgb(var(--theme-border) / 0.6) !important;
+}
+
+.border-slate-300 {
+  border-color: rgb(var(--theme-border) / 0.5) !important;
+}
+
+/* Better light mode borders */
+.light .border-slate-200,
+.light .border-slate-300 {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+.light .border-slate-300\/50 {
+  border-color: rgba(203, 213, 225, 0.5) !important;
+}
+
+.dark .border-slate-700 {
+  border-color: rgb(var(--theme-border) / 0.5) !important;
+}
+
+.dark .border-slate-800 {
+  border-color: rgb(var(--theme-border) / 0.5) !important;
+}
+
+/* Hover states */
+.hover\:bg-slate-100:hover {
+  background-color: rgb(var(--theme-bg-secondary) / 0.8) !important;
+}
+
+.hover\:bg-slate-50:hover {
+  background-color: rgb(var(--theme-bg-secondary) / 0.6) !important;
+}
+
+/* Better light mode hover states */
+.light .hover\:bg-slate-100:hover {
+  background-color: rgba(241, 245, 249, 1) !important;
+}
+
+.light .hover\:bg-slate-50:hover {
+  background-color: rgba(248, 250, 252, 1) !important;
+}
+
+.light .hover\:bg-white:hover {
+  background-color: rgba(249, 250, 251, 1) !important;
+}
+
+.dark .hover\:bg-slate-800:hover {
+  background-color: rgb(var(--theme-bg-secondary) / 0.9) !important;
+}
+
+.dark .hover\:bg-slate-700:hover {
+  background-color: rgb(var(--theme-bg-secondary) / 0.7) !important;
+}
+
+/* Preserve accent color for brand elements */
+.bg-brand,
+.text-brand,
+.border-brand {
+  /* Brand colors are handled separately */
+  opacity: 1;
+}
+
+/* ============================================ */
+/* REMOVE ALL WHITE TEXT - GLOBAL OVERRIDE */
+/* ============================================ */
+
+/* Replace ALL white text with vibrant colors */
+.text-white,
+[class*="text-white"],
+.dark .text-white,
+.light .text-white {
+  color: rgb(212, 212, 212) !important; /* #D4D4D4 - cinza claro vibrante */
+}
+
+/* Replace slate-50 and slate-100 that look white */
+.text-slate-50,
+.text-slate-100,
+.dark .text-slate-50,
+.dark .text-slate-100 {
+  color: rgb(212, 212, 212) !important; /* #D4D4D4 */
+}
+
+/* Light mode - usar cores escuras */
+.light .text-slate-50,
+.light .text-slate-100 {
+  color: rgb(51, 65, 85) !important; /* slate-700 */
+}
+
+/* Exceção: Brand buttons podem usar cores vibrantes */
+.bg-brand,
+.bg-brand *,
+button.bg-brand,
+[class*="bg-brand"] {
+  color: white !important;
+}
+
+/* IDE - Forçar cores vibrantes no código */
+#ide-page pre,
+#ide-page code,
+#ide-page .font-mono {
+  color: rgb(212, 212, 212) !important; /* Base color */
+}
+
+/* Garantir que títulos e headers usem cores apropriadas */
+h1, h2, h3, h4, h5, h6 {
+  color: rgb(var(--theme-text)) !important;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  color: rgb(212, 212, 212) !important;
+}
+
+/* ============================================ */
+/* PRESERVE ACCENT COLORS */
+/* ============================================ */
+
+/* ============================================ */
+/* RZONE HARMONY - GLASSMORPHISM EFFECTS */
+/* ============================================ */
+
+/* Enhanced glassmorphism for all cards and panels */
+.theme-rzone-harmony .bg-white\/60,
+.theme-rzone-harmony .bg-white\/80,
+.theme-rzone-harmony .bg-white\/40,
+.theme-rzone-harmony [class*="bg-white/"] {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(20px) saturate(180%) brightness(105%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(105%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(59, 130, 246, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Dark mode glassmorphism */
+.dark.theme-rzone-harmony .bg-slate-800\/40,
+.dark.theme-rzone-harmony .bg-slate-800\/60,
+.dark.theme-rzone-harmony .bg-slate-800\/30,
+.dark.theme-rzone-harmony .bg-slate-800\/20,
+.dark.theme-rzone-harmony [class*="bg-slate-8"] {
+  background: rgba(17, 24, 39, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(110%);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(96, 165, 250, 0.1),
+    0 0 80px rgba(59, 130, 246, 0.05);
+}
+
+/* Glassmorphism for sidebar and panels */
+.theme-rzone-harmony .border-r,
+.theme-rzone-harmony .border-l,
+.theme-rzone-harmony .border-b,
+.theme-rzone-harmony .border-t {
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+
+.dark.theme-rzone-harmony .border-slate-700\/50,
+.dark.theme-rzone-harmony [class*="border-slate-7"] {
+  border-color: rgba(96, 165, 250, 0.15) !important;
+  box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.03);
+}
+
+/* Light mode cards with frosted glass effect */
+.light.theme-rzone-harmony .bg-white\/60,
+.light.theme-rzone-harmony .bg-white\/80,
+.light.theme-rzone-harmony [class*="bg-white/"] {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(18px) saturate(150%) brightness(102%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%) brightness(102%);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(59, 130, 246, 0.04);
+}
+
+/* Rounded elements get enhanced glass effect */
+.theme-rzone-harmony .rounded-xl,
+.theme-rzone-harmony .rounded-lg,
+.theme-rzone-harmony .rounded-2xl {
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  position: relative;
+}
+
+/* Glass shine effect on top edge */
+.theme-rzone-harmony .rounded-xl::before,
+.theme-rzone-harmony .rounded-lg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.5) 50%, 
+    transparent 100%);
+  border-radius: inherit;
+}
+
+.dark.theme-rzone-harmony .rounded-xl::before,
+.dark.theme-rzone-harmony .rounded-lg::before {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(96, 165, 250, 0.3) 50%, 
+    transparent 100%);
+}
+
+/* Enhanced shadows for depth */
+.light.theme-rzone-harmony .shadow-lg {
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(59, 130, 246, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+.light.theme-rzone-harmony .shadow-xl {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(59, 130, 246, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+.dark.theme-rzone-harmony .shadow-lg {
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(96, 165, 250, 0.15),
+    inset 0 1px 0 rgba(96, 165, 250, 0.1),
+    0 0 60px rgba(59, 130, 246, 0.08) !important;
+}
+
+.dark.theme-rzone-harmony .shadow-xl {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(96, 165, 250, 0.2),
+    inset 0 1px 0 rgba(96, 165, 250, 0.15),
+    0 0 80px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Card hover effects with gradient glow and glass distortion */
+.theme-rzone-harmony .rounded-xl:hover,
+.theme-rzone-harmony .rounded-lg:hover {
+  backdrop-filter: blur(20px) saturate(180%) brightness(108%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(108%);
+  box-shadow: 
+    0 12px 48px rgba(59, 130, 246, 0.2),
+    0 0 0 1px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 0 100px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark.theme-rzone-harmony .rounded-xl:hover,
+.dark.theme-rzone-harmony .rounded-lg:hover {
+  backdrop-filter: blur(28px) saturate(220%) brightness(115%);
+  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(115%);
+  box-shadow: 
+    0 12px 48px rgba(59, 130, 246, 0.25),
+    0 0 0 1px rgba(96, 165, 250, 0.35),
+    inset 0 1px 0 rgba(96, 165, 250, 0.2),
+    0 0 120px rgba(59, 130, 246, 0.2);
+}
+
+/* Glassmorphism for buttons */
+.theme-rzone-harmony button:not(.bg-brand) {
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/* Input fields glass effect */
+.theme-rzone-harmony input,
+.theme-rzone-harmony textarea,
+.theme-rzone-harmony select {
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dark.theme-rzone-harmony input,
+.dark.theme-rzone-harmony textarea,
+.dark.theme-rzone-harmony select {
+  background: rgba(17, 24, 39, 0.7) !important;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+/* Scrollbar with glass effect */
+.theme-rzone-harmony ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark.theme-rzone-harmony ::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.theme-rzone-harmony ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.6), rgba(139, 92, 246, 0.6));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================ */
+/* PRESERVE ACCENT COLORS */
+/* ============================================ */
+
+/* Focus states with brand color */
+.theme-rzone-harmony input:focus,
+.theme-rzone-harmony textarea:focus,
+.theme-rzone-harmony select:focus {
+  border-color: rgb(59, 130, 246) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Light mode input improvements */
+.light.theme-rzone-harmony input,
+.light.theme-rzone-harmony textarea,
+.light.theme-rzone-harmony select {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(209, 213, 219, 0.8) !important;
+}
+
+.light.theme-rzone-harmony input:hover,
+.light.theme-rzone-harmony textarea:hover,
+.light.theme-rzone-harmony select:hover {
+  border-color: rgba(156, 163, 175, 0.9) !important;
+  background-color: rgba(255, 255, 255, 1) !important;
+}
+
+.light.theme-rzone-harmony input::placeholder,
+.light.theme-rzone-harmony textarea::placeholder {
+  color: rgba(156, 163, 175, 0.8) !important;
+}
+
+/* Scrollbar with brand accent */
+.theme-rzone-harmony ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border-radius: 4px;
+}
+
+.theme-rzone-harmony ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%) !important;
+}
+
+/* Enhanced shadows */
+.theme-rzone-harmony .shadow-lg {
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(59, 130, 246, 0.05) !important;
+}
+
+.theme-rzone-harmony .shadow-xl {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark.theme-rzone-harmony .shadow-lg {
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(96, 165, 250, 0.1) !important;
+}
+
+.dark.theme-rzone-harmony .shadow-xl {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(96, 165, 250, 0.15) !important;
+}
+
+/* Light mode - Better card appearance */
+.light.theme-rzone-harmony .border-slate-300\/50,
+.light.theme-rzone-harmony .border-slate-200\/50 {
+  border-color: rgba(226, 232, 240, 0.7) !important;
+}
+
+.light.theme-rzone-harmony .bg-slate-100\/60 {
+  background-color: rgba(243, 244, 246, 0.6) !important;
+}
+
+.light.theme-rzone-harmony .bg-slate-50\/60 {
+  background-color: rgba(249, 250, 251, 0.8) !important;
+}
+
+/* Light mode - Better backdrop blur */
+.light.theme-rzone-harmony .backdrop-blur-md {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+.light.theme-rzone-harmony .backdrop-blur-sm {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(8px) saturate(110%);
+}
+
+/* Light mode - Text on colored backgrounds */
+.light.theme-rzone-harmony .bg-blue-50 {
+  background-color: rgba(239, 246, 255, 0.8) !important;
+}
+
+.light.theme-rzone-harmony .bg-green-50 {
+  background-color: rgba(240, 253, 244, 0.8) !important;
+}
+
+.light.theme-rzone-harmony .bg-red-50 {
+  background-color: rgba(254, 242, 242, 0.8) !important;
+}
+
+/* ============================================ */
+/* RZONE HARMONY - IDE SYNTAX COLORS */
+/* ============================================ */
+
+/* Custom color classes for RZone Harmony syntax highlighting */
+.theme-rzone-harmony .text-\[\#3b82f6\] {
+  color: #3b82f6 !important;
+}
+
+.theme-rzone-harmony .text-\[\#8b5cf6\] {
+  color: #8b5cf6 !important;
+}
+
+.theme-rzone-harmony .text-\[\#ec4899\] {
+  color: #ec4899 !important;
+}
+
+.theme-rzone-harmony .text-\[\#10b981\] {
+  color: #10b981 !important;
+}
+
+.theme-rzone-harmony .text-\[\#f59e0b\] {
+  color: #f59e0b !important;
+}
+
+.theme-rzone-harmony .text-\[\#06b6d4\] {
+  color: #06b6d4 !important;
+}
+
+/* IDE Editor background */
+.theme-rzone-harmony #ide-page .bg-slate-950 {
+  background-color: rgba(15, 23, 42, 0.98) !important;
+}
+
+.light.theme-rzone-harmony #ide-page .bg-slate-950 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* IDE Terminal */
+.theme-rzone-harmony #ide-page .bg-black {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%) !important;
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.light.theme-rzone-harmony #ide-page .bg-black {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%) !important;
+  border-top: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+/* IDE Line numbers */
+.theme-rzone-harmony #ide-page .text-slate-600 {
+  color: rgba(96, 165, 250, 0.4) !important;
+}
+
+.light.theme-rzone-harmony #ide-page .text-slate-600 {
+  color: rgba(59, 130, 246, 0.5) !important;
+}
+
+/* IDE Active tab */
+.theme-rzone-harmony #ide-page .bg-slate-900 {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%) !important;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.light.theme-rzone-harmony #ide-page .bg-slate-900 {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%) !important;
+  border-bottom: 2px solid #3b82f6;
+}
+
+/* IDE - Remove white text */
+.theme-rzone-harmony #ide-page .text-white,
+.theme-rzone-harmony #ide-page .text-slate-50,
+.theme-rzone-harmony #ide-page .text-slate-100 {
+  color: rgb(203, 213, 225) !important;
+}
+
+.light.theme-rzone-harmony #ide-page .text-white,
+.light.theme-rzone-harmony #ide-page .text-slate-50,
+.light.theme-rzone-harmony #ide-page .text-slate-100 {
+  color: rgb(71, 85, 105) !important;
+}
+
+.dark.theme-rzone-harmony #ide-page .text-slate-100 {
+  color: rgb(203, 213, 225) !important;
+}
+
+/* IDE file tree text colors */
+.theme-rzone-harmony #ide-page .text-slate-200 {
+  color: rgb(226, 232, 240) !important;
+}
+
+.theme-rzone-harmony #ide-page .text-slate-300 {
+  color: rgb(203, 213, 225) !important;
+}
+
+.light.theme-rzone-harmony #ide-page .text-slate-200,
+.light.theme-rzone-harmony #ide-page .text-slate-300 {
+  color: rgb(51, 65, 85) !important;
+}
+
+/* IDE placeholder text */
+.theme-rzone-harmony #ide-page input::placeholder,
+.theme-rzone-harmony #ide-page textarea::placeholder {
+  color: rgba(148, 163, 184, 0.7) !important;
+}
+
+.light.theme-rzone-harmony #ide-page input::placeholder,
+.light.theme-rzone-harmony #ide-page textarea::placeholder {
+  color: rgba(100, 116, 139, 0.7) !important;
+}
+
+/* IDE buttons and icons - no white */
+.theme-rzone-harmony #ide-page button {
+  color: rgb(203, 213, 225) !important;
+}
+
+.light.theme-rzone-harmony #ide-page button {
+  color: rgb(51, 65, 85) !important;
+}
+
+.theme-rzone-harmony #ide-page button:hover {
+  color: rgb(226, 232, 240) !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.light.theme-rzone-harmony #ide-page button:hover {
+  color: rgb(30, 41, 59) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+/* IDE scrollbar track */
+.theme-rzone-harmony #ide-page ::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3) !important;
+}
+
+.light.theme-rzone-harmony #ide-page ::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5) !important;
+}
+
+/* IDE tabs text */
+.theme-rzone-harmony #ide-page .text-slate-400 {
+  color: rgb(148, 163, 184) !important;
+}
+
+.light.theme-rzone-harmony #ide-page .text-slate-400 {
+  color: rgb(100, 116, 139) !important;
+}

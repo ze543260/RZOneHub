@@ -169,7 +169,8 @@ fn read_directory_shallow(path: &PathBuf, files: &mut Vec<FileNode>) -> Result<(
            file_name == "build" ||
            file_name == ".git" ||
            file_name == "vendor" ||
-           file_name == "__pycache__" {
+           file_name == "__pycache__" ||
+           file_name == "RZ-One" {
             continue;
         }
 

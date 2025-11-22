@@ -338,7 +338,8 @@ async fn deepseek_chat(client: &Client, request: ChatRequest) -> Result<ChatResp
 
     let body = json!({
         "model": model,
-        "messages": messages
+        "messages": messages,
+        "stream": false
     });
 
     let response = client
@@ -350,12 +351,35 @@ async fn deepseek_chat(client: &Client, request: ChatRequest) -> Result<ChatResp
         .await
         .context("Falha ao enviar requisição para DeepSeek")?;
 
-    let data: Value = response.json().await.context("Falha ao parsear resposta")?;
+    // Check for HTTP errors
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(anyhow::anyhow!("DeepSeek API error ({}): {}", status, error_text));
+    }
 
-    let content = data["choices"][0]["message"]["content"]
-        .as_str()
-        .context("Resposta inválida da DeepSeek")?
-        .to_string();
+    let data: Value = response.json().await.context("Falha ao parsear resposta JSON")?;
+
+    // Log the response for debugging
+    println!("DeepSeek response: {}", serde_json::to_string_pretty(&data).unwrap_or_default());
+
+    // Try multiple possible response formats
+    let content = if let Some(content) = data["choices"][0]["message"]["content"].as_str() {
+        content.to_string()
+    } else if let Some(content) = data["message"]["content"].as_str() {
+        content.to_string()
+    } else if let Some(content) = data["content"].as_str() {
+        content.to_string()
+    } else if let Some(text) = data["text"].as_str() {
+        text.to_string()
+    } else if let Some(response_text) = data["response"].as_str() {
+        response_text.to_string()
+    } else {
+        return Err(anyhow::anyhow!(
+            "Resposta inválida da DeepSeek. Estrutura recebida: {}",
+            serde_json::to_string_pretty(&data).unwrap_or_else(|_| "Unable to serialize".to_string())
+        ));
+    };
 
     Ok(ChatResponse { content })
 }

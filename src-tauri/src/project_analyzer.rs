@@ -6,8 +6,8 @@ use walkdir::WalkDir;
 
 use crate::types::{FileInfo, FileTypeStat, ProjectAnalysis};
 
-const MAX_FILE_SIZE: u64 = 100_000; // 100KB
-const MAX_FILES_WITH_CONTENT: usize = 20;
+const MAX_FILE_SIZE: u64 = 500_000; // 500KB (aumentado de 100KB)
+const MAX_FILES_WITH_CONTENT: usize = 100; // 100 arquivos (aumentado de 20)
 
 const IGNORED_DIRS: &[&str] = &[
     "node_modules",
@@ -96,11 +96,12 @@ pub fn analyze_project(base_path: Option<String>) -> Result<ProjectAnalysis> {
     let mut largest_files: Vec<FileInfo> = Vec::new();
     let mut files_added = 0;
     
-    for (path, size) in files_with_size.iter().take(30) {
+    // Incluir TODOS os arquivos de código, não apenas os maiores
+    for (path, size) in files_with_size.iter() {
         if let Ok(relative_path) = path.strip_prefix(&root) {
             let path_str = relative_path.to_string_lossy().to_string();
             
-            // Adiciona conteúdo para arquivos de código menores que MAX_FILE_SIZE
+            // Adiciona conteúdo para TODOS arquivos de código menores que MAX_FILE_SIZE
             let content = if should_include_content(&path_str) && *size < MAX_FILE_SIZE && files_added < MAX_FILES_WITH_CONTENT {
                 files_added += 1;
                 fs::read_to_string(path).ok()
@@ -108,13 +109,17 @@ pub fn analyze_project(base_path: Option<String>) -> Result<ProjectAnalysis> {
                 None
             };
             
-            largest_files.push(FileInfo {
-                path: path_str,
-                size: *size,
-                content,
-            });
+            // Adiciona à lista se tiver conteúdo ou for um arquivo grande
+            if content.is_some() || largest_files.len() < 20 {
+                largest_files.push(FileInfo {
+                    path: path_str,
+                    size: *size,
+                    content,
+                });
+            }
             
-            if largest_files.len() >= 10 {
+            // Limita o total de arquivos retornados
+            if largest_files.len() >= 50 {
                 break;
             }
         }
@@ -259,13 +264,13 @@ fn generate_project_summary(
         .collect();
     
     if !files_with_code.is_empty() {
-        summary.push_str("\n## Principais arquivos do projeto:\n\n");
+        summary.push_str("\n## Código-fonte do projeto (subpastas incluídas):\n\n");
         
-        for file in files_with_code.iter().take(10) {
+        for file in files_with_code.iter().take(50) { // Aumentado de 10 para 50
             if let Some(content) = &file.content {
-                let truncated = if content.len() > 1500 {
+                let truncated = if content.len() > 3000 { // Aumentado de 1500 para 3000
                     format!("{}...\n[Arquivo truncado - {} bytes totais]", 
-                        &content[..1500], 
+                        &content[..3000], 
                         file.size
                     )
                 } else {
@@ -282,16 +287,39 @@ fn generate_project_summary(
 
 fn should_include_content(path: &str) -> bool {
     let code_extensions = [
+        // Linguagens de programação
         "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "cs", 
-        "cpp", "c", "h", "hpp", "vue", "svelte", "json", "toml", 
-        "yaml", "yml", "md", "txt"
+        "cpp", "c", "h", "hpp", "cc", "cxx", "php", "rb", "swift",
+        "kt", "dart", "scala", "r", "m", "mm", "vb", "fs",
+        // Web e markup
+        "vue", "svelte", "html", "htm", "css", "scss", "sass", "less",
+        "xml", "svg",
+        // Configuração e dados
+        "json", "toml", "yaml", "yml", "md", "txt", "ini", "cfg",
+        "env", "properties", "conf",
+        // Scripts
+        "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd",
+        // Outros
+        "sql", "graphql", "proto", "cmake", "makefile"
     ];
     
-    if let Some(ext) = path.split('.').last() {
-        return code_extensions.contains(&ext);
+    let path_lower = path.to_lowercase();
+    
+    // Verifica extensão
+    if let Some(ext) = path_lower.split('.').last() {
+        if code_extensions.contains(&ext) {
+            return true;
+        }
     }
     
-    false
+    // Verifica arquivos sem extensão comuns
+    let filename = path_lower.split('/').last().unwrap_or("");
+    let special_files = [
+        "dockerfile", "makefile", "rakefile", "gemfile", 
+        "procfile", "license", "readme", "changelog"
+    ];
+    
+    special_files.iter().any(|&f| filename.starts_with(f))
 }
 
 fn read_important_files(root: &PathBuf) -> String {
